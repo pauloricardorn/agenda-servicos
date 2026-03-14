@@ -1,59 +1,113 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Agenda Profissional de Serviços</title>
+
+<title>Agenda de Serviços</title>
+
 <link rel="stylesheet" href="style.css">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/pt.js"></script>
+
 </head>
+
 <body>
 
-<h1>📅 Agenda Profissional de Serviços</h1>
+<h1>📅 Agenda de Serviços Técnicos</h1>
 
 <div class="container">
+
 <div class="resumo">
-    <div>Total: <span id="total">0</span></div>
-    <div>Pendentes: <span id="pendentes">0</span></div>
-    <div>Em Andamento: <span id="andamento">0</span></div>
-    <div>Concluídos: <span id="concluidos">0</span></div>
+
+<div class="box">
+Total Geral<br>
+<span id="total">0</span>
 </div>
-<h3>Novo Agendamento</h3>
+
+<div class="box">
+Pendentes<br>
+<span id="pendentes">0</span>
+</div>
+
+<div class="box">
+Em Andamento<br>
+<span id="andamento">0</span>
+</div>
+
+<div class="box">
+Concluídos<br>
+<span id="concluidos">0</span>
+</div>
+
+</div>
+
+<h2>➕ Novo Agendamento</h2>
 
 <div class="grid">
-    <input type="text" id="cliente" placeholder="Nome do Cliente">
-    <input type="text" id="endereco" placeholder="Endereço">
-    <input type="text" id="local" placeholder="Local do Serviço">
-    <input type="date" id="data">
-    <input type="time" id="hora">
-    <input type="text" id="servico" placeholder="Serviço">
-    <select id="status">
-        <option value="Pendente">Pendente</option>
-        <option value="Em Andamento">Em Andamento</option>
-        <option value="Concluído">Concluído</option>
-    </select>
+
+<input type="text" id="cliente" placeholder="Nome do Cliente">
+
+<input type="text" id="telefone" placeholder="Telefone">
+
+<input type="text" id="endereco" placeholder="Endereço">
+
+<input type="text" id="local" placeholder="Complemento">
+
+<input type="date" id="data">
+
+<input type="time" id="hora">
+
+<input type="text" id="servico" placeholder="Serviço">
+
+<select id="status">
+
+<option value="Pendente">Pendente</option>
+<option value="Em Andamento">Em Andamento</option>
+<option value="Concluído">Concluído</option>
+
+</select>
+
+<input type="text" id="obs" placeholder="Observação">
+
 </div>
 
 <br>
-<button onclick="salvarAgendamento()">Salvar</button>
+
+<button class="salvar" onclick="salvarAgendamento()">💾 Salvar</button>
 
 <hr>
 
-<h3>Filtros</h3>
-<div class="grid">
-    <input type="date" id="filtroData" onchange="listar()">
-    <select id="filtroStatus" onchange="listar()">
-        <option value="">Todos Status</option>
-        <option value="Pendente">Pendente</option>
-        <option value="Em Andamento">Em Andamento</option>
-        <option value="Concluído">Concluído</option>
-    </select>
-    <input type="text" id="buscaCliente" placeholder="Buscar Cliente" onkeyup="listar()">
-</div>
+<h2>🔎 Ferramentas</h2>
 
-<div class="cards" id="lista"></div>
+<div class="ferramentas">
+
+<label>Filtrar por data:</label>
+
+<input type="date" id="filtroData">
+
+<button onclick="abrirRota()">🗺 Mostrar rota</button>
+
+<button onclick="exportarPDF()">📄 Gerar PDF</button>
 
 </div>
+
+<hr>
+
+<h2>📋 Serviços</h2>
+
+<div id="lista" class="cards"></div>
+
+</div>
+
+<input type="text" id="miniCalendario" style="position:fixed;bottom:20px;right:20px;width:200px;z-index:1000;">
 
 <script src="script.js"></script>
+
 </body>
 </html>
