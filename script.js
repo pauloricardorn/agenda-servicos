@@ -1,128 +1,291 @@
-let agenda = JSON.parse(localStorage.getItem("agendaPro")) || [];
-let editIndex = null;
+let agenda = []
 
-function salvarStorage(){
-    localStorage.setItem("agendaPro", JSON.stringify(agenda));
+function formatarDataBR(dataISO){
+
+if(!dataISO) return "-"
+
+let data = new Date(dataISO+"T00:00:00")
+
+return data.toLocaleDateString("pt-BR")
+
 }
 
-function salvarAgendamento(){
+async function carregar(){
 
-    let agendamento = {
-        cliente: cliente.value,
-        endereco: endereco.value,
-        local: local.value,
-        data: data.value,
-        hora: hora.value,
-        servico: servico.value,
-        status: status.value
-    };
+try{
 
-    if(!agendamento.cliente || !agendamento.data || !agendamento.hora){
-        alert("Preencha os campos obrigatórios!");
-        return;
-    }
+const res = await fetch("/agendamentos")
 
-    if(editIndex !== null){
-        agenda[editIndex] = agendamento;
-        editIndex = null;
-    }else{
-        agenda.push(agendamento);
-    }
+agenda = await res.json()
 
-    salvarStorage();
-    limparCampos();
-    listar();
+listar()
+
+iniciarMiniCalendario()
+
+}catch(err){
+
+console.error("Erro:",err)
+
+}
+
+}
+
+async function salvarAgendamento(){
+
+let agendamento = {
+
+cliente:cliente.value,
+telefone:telefone.value,
+endereco:endereco.value,
+local:local.value,
+data:data.value,
+hora:hora.value,
+servico:servico.value,
+status:status.value,
+obs:obs.value
+
+}
+
+if(!agendamento.cliente || !agendamento.data || !agendamento.hora){
+
+alert("Preencha cliente, data e hora")
+
+return
+
+}
+
+await fetch("/agendamentos",{
+
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(agendamento)
+
+})
+
+limparCampos()
+
+carregar()
+
 }
 
 function listar(){
 
-    let lista = document.getElementById("lista");
-    lista.innerHTML = "";
+let lista=document.getElementById("lista")
 
-    let filtroData = document.getElementById("filtroData").value;
-    let filtroStatus = document.getElementById("filtroStatus").value;
-    let buscaCliente = document.getElementById("buscaCliente").value.toLowerCase();
+lista.innerHTML=""
 
-    let filtrados = agenda.filter(a=>{
-        return (!filtroData || a.data === filtroData) &&
-               (!filtroStatus || a.status === filtroStatus) &&
-               (!buscaCliente || a.cliente.toLowerCase().includes(buscaCliente));
-    });
+let pendentes=0
+let andamento=0
+let concluidos=0
 
-    filtrados.sort((a,b)=> new Date(a.data+" "+a.hora) - new Date(b.data+" "+b.hora));
+let filtro=filtroData.value
 
-    filtrados.forEach((a,index)=>{
+let dados=agenda.filter(a=>!filtro || a.data===filtro)
 
-        let classe = a.status === "Pendente" ? "pendente" :
-                     a.status === "Em Andamento" ? "andamento" : "concluido";
+dados.sort((a,b)=> new Date(a.data+" "+a.hora) - new Date(b.data+" "+b.hora))
 
-        lista.innerHTML += `
-            <div class="card">
-                <strong>${a.data} às ${a.hora}</strong><br>
-                Cliente: ${a.cliente}<br>
-                Endereço: ${a.endereco}<br>
-                Local: ${a.local}<br>
-                Serviço: ${a.servico}<br><br>
+dados.forEach(a=>{
 
-                Status: 
-                <select onchange="mudarStatus(${agenda.indexOf(a)}, this.value)">
-                    <option value="Pendente" ${a.status==="Pendente"?"selected":""}>Pendente</option>
-                    <option value="Em Andamento" ${a.status==="Em Andamento"?"selected":""}>Em Andamento</option>
-                    <option value="Concluído" ${a.status==="Concluído"?"selected":""}>Concluído</option>
-                </select>
+let statusAtual=a.status || "Pendente"
 
-                <div class="actions">
-                    <button class="edit" onclick="editar(${agenda.indexOf(a)})">Editar</button>
-                    <button class="delete" onclick="excluir(${agenda.indexOf(a)})">Excluir</button>
-                </div>
-            </div>
-        `;
-    });
+if(statusAtual=="Pendente") pendentes++
+if(statusAtual=="Em Andamento") andamento++
+if(statusAtual=="Concluído") concluidos++
 
-    atualizarResumo();
+let classe="pendente"
+
+if(statusAtual=="Em Andamento") classe="andamento"
+if(statusAtual=="Concluído") classe="concluido"
+
+lista.innerHTML+=`
+
+<div class="card">
+
+<strong>${a.cliente}</strong><br>
+
+📞 ${a.telefone || "-"}<br>
+
+📍 ${a.endereco}<br>
+
+📌 ${a.local || ""}<br>
+
+🛠 ${a.servico}<br>
+
+📅 ${formatarDataBR(a.data)} às ${a.hora}<br>
+
+📝 ${a.obs || ""}<br><br>
+
+<span class="badge ${classe}">${statusAtual}</span>
+
+<div class="actions">
+
+<button onclick="andamento(${a.id})">⏳ Em Andamento</button>
+
+<button onclick="concluir(${a.id})">✔ Concluir</button>
+
+<button class="delete" onclick="excluir(${a.id})">Excluir</button>
+
+</div>
+
+</div>
+
+`
+
+})
+
+document.getElementById("total").innerText=agenda.length
+document.getElementById("pendentes").innerText=pendentes
+document.getElementById("andamento").innerText=andamento
+document.getElementById("concluidos").innerText=concluidos
+
 }
 
-function mudarStatus(index, novoStatus){
-    agenda[index].status = novoStatus;
-    salvarStorage();
-    listar();
+async function andamento(id){
+
+await fetch("/agendamentos/"+id,{
+method:"PUT",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({status:"Em Andamento"})
+})
+
+carregar()
+
 }
 
-function editar(index){
-    let a = agenda[index];
-    cliente.value = a.cliente;
-    endereco.value = a.endereco;
-    local.value = a.local;
-    data.value = a.data;
-    hora.value = a.hora;
-    servico.value = a.servico;
-    status.value = a.status;
-    editIndex = index;
+async function concluir(id){
+
+await fetch("/agendamentos/"+id,{
+method:"PUT",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({status:"Concluído"})
+})
+
+carregar()
+
 }
 
-function excluir(index){
-    if(confirm("Deseja excluir este serviço?")){
-        agenda.splice(index,1);
-        salvarStorage();
-        listar();
-    }
-}
+async function excluir(id){
 
-function atualizarResumo(){
-    document.getElementById("total").innerText = agenda.length;
-    document.getElementById("pendentes").innerText =
-        agenda.filter(a=>a.status==="Pendente").length;
+if(!confirm("Deseja excluir?")) return
 
-    document.getElementById("andamento") &&
-        (document.getElementById("andamento").innerText =
-        agenda.filter(a=>a.status==="Em Andamento").length);
+await fetch("/agendamentos/"+id,{method:"DELETE"})
 
-    document.getElementById("concluidos").innerText =
-        agenda.filter(a=>a.status==="Concluído").length;
+carregar()
+
 }
 
 function limparCampos(){
-    document.querySelectorAll("input").forEach(i=>i.value="");
+
+document.querySelectorAll(".grid input").forEach(i=>i.value="")
+
+status.selectedIndex=0
+
 }
 
-listar();
+function abrirRota(){
+
+let dataFiltroVal=filtroData.value
+
+if(!dataFiltroVal){
+
+alert("Selecione uma data")
+return
+
+}
+
+let enderecos=agenda.filter(a=>a.data===dataFiltroVal).map(a=>a.endereco)
+
+if(!enderecos.length){
+
+alert("Nenhum endereço encontrado")
+return
+
+}
+
+navigator.geolocation.getCurrentPosition(pos=>{
+
+let {latitude,longitude}=pos.coords
+
+let url=`https://www.google.com/maps/dir/${latitude},${longitude}/`
+
+enderecos.forEach(e=> url+=encodeURIComponent(e)+"/")
+
+window.open(url)
+
+})
+
+}
+
+function exportarPDF(){
+
+let dataFiltroVal=filtroData.value
+
+if(!dataFiltroVal){
+
+alert("Selecione uma data")
+return
+
+}
+
+const {jsPDF}=window.jspdf
+
+let doc=new jsPDF()
+
+doc.setFontSize(18)
+doc.text("Agenda de Serviços",20,20)
+
+doc.setFontSize(12)
+doc.text("Data: "+formatarDataBR(dataFiltroVal),20,30)
+
+let y=40
+
+agenda.filter(a=>a.data===dataFiltroVal).forEach(a=>{
+
+doc.text("Cliente: "+a.cliente,20,y)
+doc.text("Endereço: "+a.endereco,20,y+6)
+doc.text("Serviço: "+a.servico,20,y+12)
+doc.text("Hora: "+a.hora,20,y+18)
+
+y+=30
+
+})
+
+doc.save("agenda-"+dataFiltroVal+".pdf")
+
+}
+
+filtroData.addEventListener("change",listar)
+
+function iniciarMiniCalendario(){
+
+let datasServicos = agenda.map(a => a.data)
+
+flatpickr("#miniCalendario",{
+
+inline:true,
+locale:"pt",
+
+onDayCreate:function(dObj,dStr,fp,dayElem){
+
+let dataDia = dayElem.dateObj.toISOString().split("T")[0]
+
+if(datasServicos.includes(dataDia)){
+
+dayElem.innerHTML += "<span class='dot'></span>"
+
+}
+
+},
+
+onChange:function(selectedDates,dateStr){
+
+filtroData.value = dateStr
+listar()
+
+}
+
+})
+
+}
+
+window.onload=carregar
